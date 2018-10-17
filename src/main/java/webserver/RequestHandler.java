@@ -10,9 +10,13 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import model.User;
+import util.HttpRequestUtils;
 
 public class RequestHandler extends Thread {
     private static final Logger log = LoggerFactory.getLogger(RequestHandler.class);
@@ -41,10 +45,18 @@ public class RequestHandler extends Thread {
             	log.info("Header : {}", line);            	
             }
 */
-            DataOutputStream dos = new DataOutputStream(out);
-            byte[] body = Files.readAllBytes(new File("./webapp" + tokens[1]).toPath());
-            response200Header(dos, body.length);
-            responseBody(dos, body);
+            if (tokens[1].contains("?")) {
+            	String params = tokens[1].substring(tokens[1].indexOf("?") + 1);
+            	Map<String, String> map = HttpRequestUtils.parseQueryString(params);
+            	User user = new User(map.get("userID"), map.get("password"), map.get("name"), map.get("email"));
+            	log.info("User info : {}", user);
+            }
+            else {
+	            DataOutputStream dos = new DataOutputStream(out);
+	            byte[] body = Files.readAllBytes(new File("./webapp" + tokens[1]).toPath());
+	            response200Header(dos, body.length);
+	            responseBody(dos, body);
+	        }
         } catch (IOException e) {
             log.error(e.getMessage());
         }
