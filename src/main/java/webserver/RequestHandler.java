@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 
 import model.User;
 import util.HttpRequestUtils;
+import util.IOUtils;
 
 public class RequestHandler extends Thread {
     private static final Logger log = LoggerFactory.getLogger(RequestHandler.class);
@@ -45,7 +46,24 @@ public class RequestHandler extends Thread {
             	log.info("Header : {}", line);            	
             }
 */
-            if (tokens[1].contains("?")) {
+            int contentLength = 0;
+            if (tokens[0].equals("POST")) {
+            	while(!line.equals("")) {
+            	   	line = br.readLine();
+            	   	tokens = line.split(" ");
+            	   	if (tokens[0].equals("Content-Length:")) {
+            	   		contentLength = Integer.parseInt(tokens[1]);
+            	   	}
+                	log.info("Header : {}", line);            	
+                }
+            	//br.readLine();
+            	line = IOUtils.readData(br, contentLength);
+            	log.info("Body : {}",line);
+            	Map<String, String> map = HttpRequestUtils.parseQueryString(line);
+            	User user = new User(map.get("userID"), map.get("password"), map.get("name"), map.get("email"));
+            	log.info("User info : {}", user);
+            }
+            else if (tokens[1].contains("?")) {
             	String params = tokens[1].substring(tokens[1].indexOf("?") + 1);
             	Map<String, String> map = HttpRequestUtils.parseQueryString(params);
             	User user = new User(map.get("userID"), map.get("password"), map.get("name"), map.get("email"));
