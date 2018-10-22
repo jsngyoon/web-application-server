@@ -10,6 +10,7 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collection;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -51,63 +52,83 @@ public class RequestHandler extends Thread {
 			String hostName = null;
 			String url = tokens[1];
 			Boolean logined = false;
-			if (tokens[0].equals("POST")) { // POST 회원가입
-				while (!line.equals("")) {
-					line = br.readLine();
-					tokens = line.split(" ");
-					if (tokens[0].equals("Content-Length:"))
-						contentLength = Integer.parseInt(tokens[1]);
-					if (tokens[0].equals("Host:"))
-						hostName = tokens[1];
-					if (tokens[0].equals("Cookie")) {
-						Map<String, String> cookieMap = HttpRequestUtils.parseCookies(line.substring(8));
-						logined = Boolean.parseBoolean(cookieMap.get("logined"));
-					}
-					log.info("Header : {}", line);
+		
+			while (!line.equals("")) { // Header 처리
+				line = br.readLine();
+				tokens = line.split(" ");
+				if (tokens[0].equals("Content-Length:"))
+					contentLength = Integer.parseInt(tokens[1]);
+				if (tokens[0].equals("Host:"))
+					hostName = tokens[1];
+				if (tokens[0].equals("Cookie:")) {
+					Map<String, String> cookieMap = HttpRequestUtils.parseCookies(line.substring(8));
+					logined = Boolean.parseBoolean(cookieMap.get("logined"));
 				}
-				
-				// br.readLine();
-				line = IOUtils.readData(br, contentLength);
-				log.info("Body : {}", line);
-				Map<String, String> map = HttpRequestUtils.parseQueryString(line);
-				if ("/user/create".equals(url)) {
-					User user = new User(map.get("userID"), map.get("password"), map.get("name"), map.get("email"));
-					DataBase.addUser(user);
-					log.info("User info : {}", user);
-					response302Header(dos, hostName, "/index.html", false);
-				}
-				else if ("/user/login".equals(url)) {
-					User user = DataBase.findUserById(map.get("userID"));
-					if (user != null && user.getPassword().equals(map.get("password")))
-						response302Header(dos, hostName, "/index.html", true);
-					else response302Header(dos, hostName, "/user/login_failed.html", false);
-				}				
+				log.info("Header : {}", line);
 			}
-			if (tokens[0].equals("GET")) {
-				if (tokens[1].contains("?")) { // GET 회원가입
-					String params = tokens[1].substring(tokens[1].indexOf("?") + 1);
-					Map<String, String> map = HttpRequestUtils.parseQueryString(params);
-					User user = new User(map.get("userID"), map.get("password"), map.get("name"), map.get("email"));
-					log.info("User info : {}", user);
+						
+			line = IOUtils.readData(br, contentLength);
+			log.info("Body : {}", line);
+			Map<String, String> map = HttpRequestUtils.parseQueryString(line);
+			
+			if ("/user/create".startsWith(url)) {
+				if (url.contains("?")) { // GET 회원가입
+					String params = url.substring(url.indexOf("?") + 1);
+					map = HttpRequestUtils.parseQueryString(params);
+				}					
+				User user = new User(map.get("userId"), map.get("password"), map.get("name"), map.get("email"));
+				DataBase.addUser(user);
+				log.info("User info : {}", user);
+				response302Header(dos, hostName, "/index.html", false);				
+			}
+			else if ("/user/login".equals(url)) {
+				User user = DataBase.findUserById(map.get("userId"));
+				if (user != null && user.getPassword().equals(map.get("password"))) {
+					log.info("Login Success !!");
+					response302Header(dos, hostName, "/index.html", true);
 				}
-				else if (tokens[1].equals("/user/list")) {
-					
-				}
-				else { // webapp html file 처리
-					byte[] body = Files.readAllBytes(new File("./webapp" + tokens[1]).toPath());
-					response200Header(dos, body.length);
+				else response302Header(dos, hostName, "/user/login_failed.html", false);
+			}
+			else if ("/user/list".equals(url)) {
+				if (logined) {
+					Collection<User> userList = DataBase.findAll();
+					StringBuilder sb = new StringBuilder();
+					sb.append("<table border='1'>");
+					for (User user : userList) {
+						sb.append("<tr>");
+						sb.append("<td>" + user.getUserId() + "</td>");
+						sb.append("<td>" + user.getName() + "</td>");
+						sb.append("<td>" + user.getEmail() + "</td>");
+						sb.append("</tr>");						
+					}
+					sb.append("</table>");
+					byte[] body = sb.toString().getBytes();
+					response200Header(dos, body.length, url);
 					responseBody(dos, body);
 				}
+				else {
+					resourceResponse(dos, "login.html");
+				}
 			}
+		
+			resourceResponse(dos, url);
+
 		} catch (IOException e) {
 			log.error(e.getMessage());
 		}
 	}
 
-	private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {
+	private void resourceResponse(DataOutputStream dos, String url) throws IOException {
+		byte[] body = Files.readAllBytes(new File("./webapp" + url).toPath());
+		response200Header(dos, body.length, url);
+		responseBody(dos, body);
+	}
+
+	private void response200Header(DataOutputStream dos, int lengthOfBodyContent, String url) {
 		try {
 			dos.writeBytes("HTTP/1.1 200 OK \r\n");
-			dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
+			if (url.endsWith(".css")) dos.writeBytes("Content-Type: text/css\r\n");
+			else dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
 			dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
 			dos.writeBytes("\r\n");
 		} catch (IOException e) {
