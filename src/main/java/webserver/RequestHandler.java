@@ -3,6 +3,7 @@ package webserver;
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -34,7 +35,7 @@ public class RequestHandler extends Thread {
 		log.debug("New Client Connect! Connected IP : {}, Port : {}", connection.getInetAddress(),
 				connection.getPort());
 
-		try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()) {
+		try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream();) {
 			// TODO 사용자 요청에 대한 처리는 이 곳에 구현하면 된다.
 
 			HttpRequest request = new HttpRequest(in);
@@ -43,9 +44,10 @@ public class RequestHandler extends Thread {
 			log.info("Path : {}", request.getPath());
 			if (controller == null) {
 				response.forward(request.getPath());
-				return;
 			}
-			controller.service(request, response);
+			else {
+				controller.service(request, response);
+			}
 			
 			/*
 			BufferedReader br = new BufferedReader(new InputStreamReader(in));

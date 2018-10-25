@@ -10,7 +10,7 @@ public class CreateController extends MainController {
 	private static final Logger log = LoggerFactory.getLogger(CreateController.class);
 	
 	@Override
-	public void doPost(HttpRequest request, HttpResponse response) {
+	public void doGet(HttpRequest request, HttpResponse response) {
 		User user = new User(request.getParameter("userId"), 
 				             request.getParameter("password"), 
 				             request.getParameter("name"), 

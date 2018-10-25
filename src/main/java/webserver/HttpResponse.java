@@ -98,10 +98,12 @@ public class HttpResponse {
 
 	private void processHeaders() {
 		// TODO Auto-generated method stub
+		log.info("processHeaders()");
 		try {
 			Set<String> keys = headers.keySet();
 			for(String key : keys) {
 				dos.writeBytes(key + ": " + headers.get(key) + "\r\n");
+				log.info("{}: {}",key, headers.get(key));
 			}
 		}
 		catch (IOException e) {
