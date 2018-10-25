@@ -37,6 +37,17 @@ public class RequestHandler extends Thread {
 		try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()) {
 			// TODO 사용자 요청에 대한 처리는 이 곳에 구현하면 된다.
 
+			HttpRequest request = new HttpRequest(in);
+			HttpResponse response = new HttpResponse(out);
+			Controller controller = new ControllerMapper().getController(request.getPath());
+			log.info("Path : {}", request.getPath());
+			if (controller == null) {
+				response.forward(request.getPath());
+				return;
+			}
+			controller.service(request, response);
+			
+			/*
 			BufferedReader br = new BufferedReader(new InputStreamReader(in));
 			DataOutputStream dos = new DataOutputStream(out);
 			String line = br.readLine();
@@ -44,10 +55,10 @@ public class RequestHandler extends Thread {
 			if (line == null)
 				return;
 			String[] tokens = line.split(" ");
-			/*
-			 * while(!line.equals("")) { line = br.readLine(); log.info("Header : {}",
-			 * line); }
-			 */
+			
+			 // while(!line.equals("")) { line = br.readLine(); log.info("Header : {}",
+			 // line); }
+			 //
 			int contentLength = 0;
 			String hostName = null;
 			String url = tokens[1];
@@ -112,12 +123,13 @@ public class RequestHandler extends Thread {
 			}
 		
 			resourceResponse(dos, url);
+			*/
 
 		} catch (IOException e) {
 			log.error(e.getMessage());
 		}
 	}
-
+/*
 	private void resourceResponse(DataOutputStream dos, String url) throws IOException {
 		byte[] body = Files.readAllBytes(new File("./webapp" + url).toPath());
 		response200Header(dos, body.length, url);
@@ -156,5 +168,5 @@ public class RequestHandler extends Thread {
 		} catch (IOException e) {
 			log.error(e.getMessage());
 		}
-	}
+	} */
 }
